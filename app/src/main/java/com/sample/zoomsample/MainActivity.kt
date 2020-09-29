@@ -2,6 +2,8 @@ package com.sample.zoomsample
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -18,25 +20,28 @@ import com.sample.zoomsample.video.MeetingVideoCallback
 import com.sample.zoomsample.video.MeetingVideoHelper
 import kotlinx.android.synthetic.main.activity_main.*
 import us.zoom.sdk.*
+import us.zoom.sdk.MeetingError.*
 
 class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCallback.VideoEvent {
 
     private var mZoomSDK: ZoomSDK? = null
-    private var mMeetingService: MeetingService? = null
-    private var mInMeetingService: InMeetingService? = null
-
     private var mDefaultVideoView: MobileRTCVideoView? = null
     private var mDefaultVideoViewMgr: MobileRTCVideoViewManager? = null
     private var renderInfo: MobileRTCVideoUnitRenderInfo? = null
     var meetingOptionBar: MeetingOptionBar? = null
     private var meetingAudioHelper: MeetingAudioHelper? = null
 
+
+    private val LAYOUT_TYPE_WAITHOST = 1
+    private val LAYOUT_TYPE_IN_WAIT_ROOM = 2
+    private var currentLayoutType = -1
+
     private var meetingVideoHelper: MeetingVideoHelper? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
-
+        loading_bar?.visibility = View.VISIBLE
         initZoomSDK()
     }
 
@@ -57,7 +62,7 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
             if (errorCode != ZoomError.ZOOM_ERROR_SUCCESS) {
                 showSuccessToast("Failed to initialize Zoom SDK. Error: " + errorCode + ", internalErrorCode=" + internalErrorCode)
             } else {
-                showSuccessToast("Initialize Zoom SDK successfully.")
+                updateStatus("Initialize Zoom SDK successfully.")
                 //Auto login by caling Zoom api's by providing email we get
                 // Zoom Token and Zoom Access Token, etc
                 showCustomUI()
@@ -69,28 +74,38 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
         }
     }
 
+    fun updateStatus(status:String){
+        txt_status_change?.text = status
+    }
     private fun showCustomUI() {
+        ZoomSDK.getInstance().meetingSettingsHelper.enable720p(false)
+        ZoomSDK.getInstance().meetingService.addListener(meetServiceListener)
+        ZoomSDK.getInstance().meetingSettingsHelper.setCustomizedNotificationData(null, handle)
+
         ZoomSDK.getInstance().meetingSettingsHelper.isCustomizedMeetingUIEnabled = true
         val params = JoinMeetingParams()
-        params.meetingNo = "78137556666"
-        params.password = "yTdPj7"
-        params.displayName = "veera"
+        params.meetingNo = "76165819888"
+        params.password = "k67220"
+        params.displayName = "Kanta k"
         ZoomSDK.getInstance().meetingService?.joinMeetingWithParams(
             this,
             params,
             ZoomMeetingUISettingHelper.getJoinMeetingOptions()
         )
-
-        ZoomSDK.getInstance().meetingService.addListener(meetServiceListener)
-        ZoomSDK.getInstance().inMeetingService.addListener(inMeetServiceListener)
-        MeetingAudioCallback.getInstance().addListener(this)
-        MeetingVideoCallback.getInstance().addListener(this)
-        meetingAudioHelper =
-            MeetingAudioHelper(audioCallBack)
-        meetingVideoHelper =
-            MeetingVideoHelper(this, videoCallBack)
-//        ZoomSDK.getInstance().meetingSettingsHelper.enable720p(true)
     }
+
+
+    var handle = InMeetingNotificationHandle { context, intent ->
+            var intent = intent
+            intent = Intent(context, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            if (context !is Activity) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            intent.action = InMeetingNotificationHandle.ACTION_RETURN_TO_CONF
+            context.startActivity(intent)
+            true
+        }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -109,26 +124,56 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
             internalErrorCode: Int
         ) {
             Log.d("meetServiceListener.TAG", "onMeetingStatusChanged $meetingStatus:$errorCode")
+            updateStatus("onMeetingStatusChanged $meetingStatus $errorCode")
 
-            if (meetingStatus == MeetingStatus.MEETING_STATUS_FAILED && errorCode == MeetingError.MEETING_ERROR_CLIENT_INCOMPATIBLE) {
+            if(errorCode == MEETING_ERROR_INCORRECT_MEETING_NUMBER|| errorCode==MEETING_ERROR_MEETING_OVER || errorCode ==MEETING_ERROR_MEETING_NOT_EXIST){
+                Toast.makeText(this@MainActivity, "The meeting doesn't exist", Toast.LENGTH_SHORT).show()
+                finish()
+            }else if(errorCode == MEETING_ERROR_NETWORK_UNAVAILABLE|| errorCode==MEETING_ERROR_NETWORK_ERROR){
+                Toast.makeText(this@MainActivity, "Internet Issue", Toast.LENGTH_SHORT).show()
+                finish()
+            }else if (meetingStatus == MeetingStatus.MEETING_STATUS_FAILED && errorCode == MeetingError.MEETING_ERROR_CLIENT_INCOMPATIBLE) {
                 showSuccessToast("Version of ZoomSDK is too low!")
-            }
-
-            if (meetingStatus == MeetingStatus.MEETING_STATUS_IDLE || meetingStatus == MeetingStatus.MEETING_STATUS_FAILED) {
+            } else  if (meetingStatus == MeetingStatus.MEETING_STATUS_IDLE || meetingStatus == MeetingStatus.MEETING_STATUS_FAILED) {
                 showSuccessToast("MEETING_STATUS_IDLE")
                 onMeetingJoined()
+            }else if(errorCode == MEETING_ERROR_SUCCESS && meetingStatus == MeetingStatus.MEETING_STATUS_INMEETING) {
+//                onMeetingJoined()
+//                onMeetingJoined()
             }
         }
 
     }
 
     private fun onMeetingJoined() {
+        updateStatus("onMeetingJoined")
 
         if (ZoomSDK.getInstance().meetingService == null || ZoomSDK.getInstance().inMeetingService == null) {
             Toast.makeText(this@MainActivity, "Something Went Wrong", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
+        updateStatus("onMeetingJoined check done")
+
+        MeetingAudioCallback.getInstance().addListener(this)
+        MeetingVideoCallback.getInstance().addListener(this)
+        meetingAudioHelper =
+            MeetingAudioHelper(audioCallBack)
+        meetingVideoHelper =
+            MeetingVideoHelper(this, videoCallBack)
+        ZoomSDK.getInstance().meetingSettingsHelper.enable720p(true)
+
+        val mMeetingOptionBar = MeetingOptionBar(this)
+        meeting_option_contain?.removeAllViews()
+        meeting_option_contain?.addView(mMeetingOptionBar)
+        meetingOptionBar = mMeetingOptionBar
+        meetingOptionBar?.setCallBack(callBack)
+        updateStatus("before inMeetServiceListener set")
+
+        ZoomSDK.getInstance().inMeetingService.addListener(inMeetServiceListener)
+        updateStatus("after inMeetServiceListener set")
+
+        checkShowVideoLayout()
 
     }
 
@@ -181,9 +226,11 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
             Log.v("onMeetingUserLeave", "onMeetingUserLeave :" + p0)
         }
 
-        override fun onMeetingFail(p0: Int, p1: Int) {
-            showSuccessToast("onMeetingFail $p0")
-            Log.v("onMeetingFail", "onMeetingFail :" + p0)
+        override fun onMeetingFail(errorCode: Int, internalErrorCode: Int) {
+            showSuccessToast("onMeetingFail $errorCode")
+            Log.v("onMeetingFail", "onMeetingFail :" + errorCode)
+            video_view?.setVisibility(View.GONE)
+            showJoinFailDialog(errorCode)
         }
 
         override fun onUserAudioTypeChanged(p0: Long) {
@@ -191,9 +238,8 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
             Log.v("onUserAudioTypeChanged", "onUserAudioTypeChanged :" + p0)
         }
 
-        override fun onMyAudioSourceTypeChanged(p0: Int) {
-            showSuccessToast("onMyAudioSourceTypeChanged $p0")
-            Log.v("onMyAudioSourceTd", "onMyAudioSourceTypeChanged :" + p0)
+        override fun onMyAudioSourceTypeChanged(type: Int) {
+            meetingAudioHelper?.onMyAudioSourceTypeChanged(type)
         }
 
         override fun onSilentModeChanged(p0: Boolean) {
@@ -295,32 +341,40 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
         override fun onUserVideoStatusChanged(p0: Long) {
             showSuccessToast("onUserVideoStatusChanged $p0")
             Log.v("onUserVideoStatusC", "onUserVideoStatus : $p0")
-
         }
 
     }
 
+    private fun showJoinFailDialog(errorCode: Int) {
+        val dialog = AlertDialog.Builder(this)
+            .setCancelable(false)
+            .setTitle("Meeting Fail")
+            .setMessage("Error:$errorCode")
+            .setPositiveButton(
+                "Ok"
+            ) { dialog, which -> finish() }.create()
+        dialog.show()
+    }
+
     private fun refreshVideo(activeUserId: Long) {
 //        val activeUserId = mInMeetingService?.activeShareUserID()
-        activeUserId.let {
-            mDefaultVideoView = MobileRTCVideoView(applicationContext)
-            mDefaultVideoViewMgr = mDefaultVideoView?.videoViewManager
-            mDefaultVideoView?.setZOrderMediaOverlay(true)
-            renderInfo = MobileRTCVideoUnitRenderInfo(0, 0, 100, 100)
-            renderInfo!!.aspect_mode = MobileRTCVideoUnitAspectMode.VIDEO_ASPECT_FULL_FILLED
-            renderInfo!!.is_border_visible = true
-            mDefaultVideoViewMgr?.removeAllVideoUnits()
-//            mDefaultVideoViewMgr?.addActiveVideoUnit(renderInfo)
-            mDefaultVideoViewMgr?.addAttendeeVideoUnit(activeUserId, renderInfo)
-            video_view?.removeAllViews()
-            video_view?.addView(mDefaultVideoView)
-            val mMeetingOptionBar = MeetingOptionBar(this)
-            meeting_option_contain?.removeAllViews()
-            meeting_option_contain?.addView(mMeetingOptionBar)
-            meetingOptionBar = mMeetingOptionBar
-            meetingOptionBar?.setCallBack(callBack)
-        }
+            if (ZoomSDK.getInstance().inMeetingService.getUserInfoById(activeUserId).inMeetingUserRole == InMeetingUserInfo.InMeetingUserRole.USERROLE_HOST ) {
 
+                mDefaultVideoView = MobileRTCVideoView(applicationContext)
+                mDefaultVideoViewMgr = mDefaultVideoView?.videoViewManager
+                mDefaultVideoView?.setZOrderMediaOverlay(true)
+                renderInfo = MobileRTCVideoUnitRenderInfo(0, 0, 100, 100)
+                renderInfo!!.aspect_mode = MobileRTCVideoUnitAspectMode.VIDEO_ASPECT_ORIGINAL
+                renderInfo!!.is_border_visible = true
+                mDefaultVideoViewMgr?.removeAllVideoUnits()
+//            mDefaultVideoViewMgr?.addActiveVideoUnit(renderInfo)
+                mDefaultVideoViewMgr?.addAttendeeVideoUnit(activeUserId, renderInfo)
+                video_view?.visibility = View.VISIBLE
+                meeting_option_contain?.visibility = View.VISIBLE
+                video_view?.removeAllViews()
+                video_view?.addView(mDefaultVideoView)
+                loading_bar?.visibility = View.GONE
+            }
     }
 
     var callBack: MeetingOptionBar.MeetingOptionBarCallBack = object : MeetingOptionBar.MeetingOptionBarCallBack {
@@ -369,7 +423,7 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
         }
 
         override fun onClickLowerAllHands() {
-            if (mInMeetingService!!.lowerAllHands() == MobileRTCSDKError.SDKERR_SUCCESS) Toast.makeText(
+            if ( ZoomSDK.getInstance().inMeetingService?.lowerAllHands() == MobileRTCSDKError.SDKERR_SUCCESS) Toast.makeText(
                 this@MainActivity,
                 "Lower all hands successfully",
                 Toast.LENGTH_SHORT
@@ -377,7 +431,7 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
         }
 
         override fun onClickReclaimHost() {
-            if (mInMeetingService!!.reclaimHost() == MobileRTCSDKError.SDKERR_SUCCESS) Toast.makeText(
+            if ( ZoomSDK.getInstance().inMeetingService?.reclaimHost() == MobileRTCSDKError.SDKERR_SUCCESS) Toast.makeText(
                 this@MainActivity,
                 "Reclaim host successfully",
                 Toast.LENGTH_SHORT
@@ -470,13 +524,60 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
 
     override fun onUserVideoStatusChanged(userId: Long) {
         meetingOptionBar?.updateVideoButton()
-        meetingOptionBar?.updateSwitchCameraButton()
     }
 
     override fun onResume() {
         super.onResume()
+        checkShowVideoLayout()
         meetingVideoHelper?.checkVideoRotation(this)
     }
 
+    private fun checkShowVideoLayout() {
+        mDefaultVideoViewMgr = mDefaultVideoView?.videoViewManager
+        updateStatus("checkShowVideoLayout")
+        meeting_option_contain?.visibility = View.VISIBLE
+        if (mDefaultVideoViewMgr != null) {
+            val newLayoutType: Int = getNewVideoMeetingLayout()
+            if (currentLayoutType != newLayoutType) {
+                removeOldLayout(currentLayoutType)
+                currentLayoutType = newLayoutType
+                addNewLayout(newLayoutType)
+            }
+        }
 
+    }
+
+    private fun getNewVideoMeetingLayout(): Int {
+        var newLayoutType = -1
+        if (ZoomSDK.getInstance().meetingService.meetingStatus == MeetingStatus.MEETING_STATUS_WAITINGFORHOST) {
+            newLayoutType = LAYOUT_TYPE_WAITHOST
+            return newLayoutType
+        }
+        if (ZoomSDK.getInstance().meetingService.meetingStatus == MeetingStatus.MEETING_STATUS_IN_WAITING_ROOM) {
+            newLayoutType = LAYOUT_TYPE_IN_WAIT_ROOM
+            return newLayoutType
+        }
+        return newLayoutType
+    }
+
+
+    private fun removeOldLayout(type: Int) {
+        if (type == LAYOUT_TYPE_WAITHOST) {
+            waitJoinView?.visibility = View.GONE
+            video_view?.visibility = View.VISIBLE
+        } else if (type == LAYOUT_TYPE_IN_WAIT_ROOM) {
+            waitingRoom?.visibility = View.GONE
+            video_view?.visibility = View.VISIBLE
+        }
+    }
+
+    private fun addNewLayout(type: Int) {
+        if (type == LAYOUT_TYPE_WAITHOST) {
+            waitJoinView.visibility = View.VISIBLE
+            video_view?.visibility = View.GONE
+        } else if (type == LAYOUT_TYPE_IN_WAIT_ROOM) {
+            waitingRoom?.visibility = View.VISIBLE
+            video_view?.visibility = View.GONE
+        }
+    }
 }
