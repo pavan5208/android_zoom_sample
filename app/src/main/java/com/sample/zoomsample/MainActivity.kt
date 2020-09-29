@@ -3,6 +3,7 @@ package com.sample.zoomsample
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -10,12 +11,13 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.PopupWindow
+import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import kotlinx.android.synthetic.main.activity_main.*
 import us.zoom.sdk.*
 
-class MainActivity : Activity(), MeetingAudioCallback.AudioEvent {
+class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCallback.VideoEvent {
 
     private var mZoomSDK: ZoomSDK? = null
     private var mMeetingService: MeetingService? = null
@@ -27,7 +29,7 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent {
     var meetingOptionBar: MeetingOptionBar? = null
     private var meetingAudioHelper: MeetingAudioHelper? = null
 
-    private val meetingVideoHelper: MeetingVideoHelper? = null
+    private var meetingVideoHelper: MeetingVideoHelper? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -80,7 +82,9 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent {
         ZoomSDK.getInstance().meetingService.addListener(meetServiceListener)
         ZoomSDK.getInstance().inMeetingService.addListener(inMeetServiceListener)
         MeetingAudioCallback.getInstance().addListener(this)
+        MeetingVideoCallback.getInstance().addListener(this)
         meetingAudioHelper = MeetingAudioHelper(audioCallBack)
+        meetingVideoHelper = MeetingVideoHelper(this, videoCallBack)
 //        ZoomSDK.getInstance().meetingSettingsHelper.enable720p(true)
     }
 
@@ -390,6 +394,24 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent {
         }
     }
 
+    var videoCallBack: MeetingVideoHelper.VideoCallBack = object : MeetingVideoHelper.VideoCallBack {
+        override fun requestVideoPermission(): Boolean {
+            if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this@MainActivity,
+                    arrayOf(Manifest.permission.CAMERA),
+                    1010
+                )
+                return false
+            }
+            return true
+        }
+
+        override fun showCameraList(popupWindow: PopupWindow) {
+            popupWindow.showAsDropDown(meetingOptionBar!!.switchCameraView, 0, 20)
+        }
+    }
+
     var audioCallBack: MeetingAudioHelper.AudioCallBack = object : MeetingAudioHelper.AudioCallBack {
         override fun requestAudioPermission(): Boolean {
             if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -440,6 +462,16 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent {
                 }
             }
         }
+    }
+
+    override fun onUserVideoStatusChanged(userId: Long) {
+        meetingOptionBar?.updateVideoButton()
+        meetingOptionBar?.updateSwitchCameraButton()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        meetingVideoHelper?.checkVideoRotation(this)
     }
 
 
