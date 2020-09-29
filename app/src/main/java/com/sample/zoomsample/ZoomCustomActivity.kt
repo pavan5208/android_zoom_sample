@@ -1,12 +1,10 @@
 package com.sample.zoomsample
 
-import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import us.zoom.sdk.*
 
-class ZoomCustomActivity: Activity() {
+class ZoomCustomActivity: MeetingActivity() {
 
     var mZoomSDK : ZoomSDK ?= null
 
