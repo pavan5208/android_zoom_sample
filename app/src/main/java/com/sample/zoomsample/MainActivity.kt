@@ -3,7 +3,6 @@ package com.sample.zoomsample
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -11,9 +10,12 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.PopupWindow
-import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import com.sample.zoomsample.audio.MeetingAudioCallback
+import com.sample.zoomsample.audio.MeetingAudioHelper
+import com.sample.zoomsample.video.MeetingVideoCallback
+import com.sample.zoomsample.video.MeetingVideoHelper
 import kotlinx.android.synthetic.main.activity_main.*
 import us.zoom.sdk.*
 
@@ -70,8 +72,8 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
     private fun showCustomUI() {
         ZoomSDK.getInstance().meetingSettingsHelper.isCustomizedMeetingUIEnabled = true
         val params = JoinMeetingParams()
-        params.meetingNo = "72182278887"
-        params.password = "MBe0SC"
+        params.meetingNo = "78137556666"
+        params.password = "yTdPj7"
         params.displayName = "veera"
         ZoomSDK.getInstance().meetingService?.joinMeetingWithParams(
             this,
@@ -83,8 +85,10 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
         ZoomSDK.getInstance().inMeetingService.addListener(inMeetServiceListener)
         MeetingAudioCallback.getInstance().addListener(this)
         MeetingVideoCallback.getInstance().addListener(this)
-        meetingAudioHelper = MeetingAudioHelper(audioCallBack)
-        meetingVideoHelper = MeetingVideoHelper(this, videoCallBack)
+        meetingAudioHelper =
+            MeetingAudioHelper(audioCallBack)
+        meetingVideoHelper =
+            MeetingVideoHelper(this, videoCallBack)
 //        ZoomSDK.getInstance().meetingSettingsHelper.enable720p(true)
     }
 

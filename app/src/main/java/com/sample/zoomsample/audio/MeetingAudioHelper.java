@@ -1,4 +1,4 @@
-package com.sample.zoomsample;
+package com.sample.zoomsample.audio;
 
 
 import us.zoom.sdk.InMeetingAudioController;

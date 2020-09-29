@@ -1,6 +1,10 @@
-package com.sample.zoomsample;
+package com.sample.zoomsample.video;
 
 import android.util.Log;
+
+import com.sample.zoomsample.BaseCallback;
+import com.sample.zoomsample.BaseEvent;
+import com.sample.zoomsample.SimpleInMeetingListener;
 
 import us.zoom.sdk.ZoomSDK;
 

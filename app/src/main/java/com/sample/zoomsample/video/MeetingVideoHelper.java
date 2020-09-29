@@ -1,4 +1,4 @@
-package com.sample.zoomsample;
+package com.sample.zoomsample.video;
 
 import android.app.Service;
 import android.content.Context;
@@ -10,6 +10,9 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
+
+import com.sample.zoomsample.R;
+import com.sample.zoomsample.SimpleMenuAdapter;
 
 import java.util.List;
 
