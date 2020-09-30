@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ZoomSample</string>
+    <string name="alert_other_is_sharing">You cannot start screen share while the other participant is sharing.</string>
 </resources>
