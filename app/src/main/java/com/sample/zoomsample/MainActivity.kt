@@ -149,10 +149,9 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
                 showSuccessToast("Version of ZoomSDK is too low!")
             } else if (meetingStatus == MeetingStatus.MEETING_STATUS_IDLE || meetingStatus == MeetingStatus.MEETING_STATUS_FAILED) {
                 showSuccessToast("MEETING_STATUS_IDLE")
-                onMeetingJoined()
-            } else if (errorCode == MEETING_ERROR_SUCCESS && meetingStatus == MeetingStatus.MEETING_STATUS_INMEETING) {
-                onMeetingJoined()
+            }else if(errorCode == MEETING_ERROR_SUCCESS && meetingStatus == MeetingStatus.MEETING_STATUS_INMEETING) {
 //                onMeetingJoined()
+                onMeetingJoined()
             }
         }
 
