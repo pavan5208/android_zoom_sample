@@ -84,9 +84,9 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
 
         ZoomSDK.getInstance().meetingSettingsHelper.isCustomizedMeetingUIEnabled = true
         val params = JoinMeetingParams()
-        params.meetingNo = "76165819888"
-        params.password = "k67220"
-        params.displayName = "Kanta k"
+        params.meetingNo = "74480926066"
+        params.password = "r832zT"
+        params.displayName = "Sampy"
         ZoomSDK.getInstance().meetingService?.joinMeetingWithParams(
             this,
             params,
@@ -136,10 +136,9 @@ class MainActivity : Activity(), MeetingAudioCallback.AudioEvent, MeetingVideoCa
                 showSuccessToast("Version of ZoomSDK is too low!")
             } else  if (meetingStatus == MeetingStatus.MEETING_STATUS_IDLE || meetingStatus == MeetingStatus.MEETING_STATUS_FAILED) {
                 showSuccessToast("MEETING_STATUS_IDLE")
-                onMeetingJoined()
             }else if(errorCode == MEETING_ERROR_SUCCESS && meetingStatus == MeetingStatus.MEETING_STATUS_INMEETING) {
 //                onMeetingJoined()
-//                onMeetingJoined()
+                onMeetingJoined()
             }
         }
 
